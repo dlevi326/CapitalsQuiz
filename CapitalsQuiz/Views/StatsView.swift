@@ -52,13 +52,42 @@ struct StatsView: View {
 
 struct OverviewTab: View {
     @ObservedObject var statsManager: StatsManager
+    @State private var selectedContinent: Continent? = nil
+    
+    private var filteredStats: (questions: Int, correct: Int, accuracy: Double) {
+        if let continent = selectedContinent {
+            let key = continent.rawValue
+            if let cStats = statsManager.continentStats[key] {
+                return (cStats.questionsAnswered, cStats.correctAnswers, cStats.accuracy)
+            }
+            return (0, 0, 0.0)
+        } else {
+            return (statsManager.totalQuestionsAnswered, statsManager.totalCorrectAnswers, statsManager.overallAccuracy)
+        }
+    }
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                // Continent Filter
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Filter by Continent")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    Picker("Continent", selection: $selectedContinent) {
+                        Text("All Continents").tag(nil as Continent?)
+                        ForEach(Continent.allCases) { continent in
+                            Text(continent.rawValue).tag(continent as Continent?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.horizontal)
+                }
+                
                 // Overall Stats
                 VStack(alignment: .leading, spacing: 15) {
-                    Text("Overall Performance")
+                    Text(selectedContinent == nil ? "Overall Performance" : "\(selectedContinent!.rawValue) Performance")
                         .font(.headline)
                         .padding(.horizontal)
                     
@@ -67,36 +96,38 @@ struct OverviewTab: View {
                             icon: "number",
                             color: .blue,
                             title: "Total Questions",
-                            value: "\(statsManager.totalQuestionsAnswered)"
+                            value: "\(filteredStats.questions)"
                         )
                         
                         StatsCard(
                             icon: "checkmark.circle.fill",
                             color: .green,
                             title: "Correct Answers",
-                            value: "\(statsManager.totalCorrectAnswers)"
+                            value: "\(filteredStats.correct)"
                         )
                         
                         StatsCard(
                             icon: "percent",
                             color: .purple,
-                            title: "Overall Accuracy",
-                            value: String(format: "%.1f%%", statsManager.overallAccuracy * 100)
+                            title: "Accuracy",
+                            value: String(format: "%.1f%%", filteredStats.accuracy * 100)
                         )
                         
-                        StatsCard(
-                            icon: "flame.fill",
-                            color: .orange,
-                            title: "Current Streak",
-                            value: "\(statsManager.currentStreak)"
-                        )
-                        
-                        StatsCard(
-                            icon: "trophy.fill",
-                            color: .yellow,
-                            title: "Best Streak",
-                            value: "\(statsManager.longestStreak)"
-                        )
+                        if selectedContinent == nil {
+                            StatsCard(
+                                icon: "flame.fill",
+                                color: .orange,
+                                title: "Current Streak",
+                                value: "\(statsManager.currentStreak)"
+                            )
+                            
+                            StatsCard(
+                                icon: "trophy.fill",
+                                color: .yellow,
+                                title: "Best Streak",
+                                value: "\(statsManager.longestStreak)"
+                            )
+                        }
                     }
                     .padding(.horizontal)
                 }
@@ -107,9 +138,14 @@ struct OverviewTab: View {
                         .font(.headline)
                         .padding(.horizontal)
                     
-                    let totalCountries = CountriesData.allCountries.count
-                    let askedCountries = statsManager.countryStats.count
-                    let masteredCountries = statsManager.countryStats.values.filter { $0.accuracy >= 0.8 && $0.timesAsked >= 3 }.count
+                    let allCountriesFiltered = selectedContinent == nil ? CountriesData.allCountries : CountriesData.allCountries.filter { $0.continent == selectedContinent }
+                    let totalCountries = allCountriesFiltered.count
+                    let askedCountries = statsManager.countryStats.values.filter { stat in
+                        allCountriesFiltered.contains { $0.name == stat.countryName }
+                    }.count
+                    let masteredCountries = statsManager.countryStats.values.filter { stat in
+                        stat.accuracy >= 0.8 && stat.timesAsked >= 3 && allCountriesFiltered.contains { $0.name == stat.countryName }
+                    }.count
                     
                     VStack(spacing: 12) {
                         StatsCard(
@@ -145,13 +181,17 @@ struct CountriesTab: View {
     @ObservedObject var statsManager: StatsManager
     @State private var searchText = ""
     @State private var sortOrder = SortOrder.accuracy
+    @State private var selectedContinent: Continent? = nil
     
     enum SortOrder {
         case accuracy, name, timesAsked
     }
     
     var sortedCountries: [(country: Country, stats: CountryStats?)] {
-        let allCountriesWithStats = CountriesData.allCountries.map { country in
+        // Filter by continent first
+        let continentFiltered = selectedContinent == nil ? CountriesData.allCountries : CountriesData.allCountries.filter { $0.continent == selectedContinent }
+        
+        let allCountriesWithStats = continentFiltered.map { country in
             (country: country, stats: statsManager.countryStats[country.name])
         }
         
@@ -178,6 +218,16 @@ struct CountriesTab: View {
     
     var body: some View {
         VStack {
+            // Continent Filter
+            Picker("Continent", selection: $selectedContinent) {
+                Text("All Continents").tag(nil as Continent?)
+                ForEach(Continent.allCases) { continent in
+                    Text(continent.rawValue).tag(continent as Continent?)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal)
+            
             // Sort Picker
             Picker("Sort By", selection: $sortOrder) {
                 Text("Accuracy").tag(SortOrder.accuracy)
@@ -269,6 +319,13 @@ struct HistoryRow: View {
                 Text(entry.date, style: .time)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+            }
+            
+            if let continent = entry.continent {
+                Text(continent.rawValue)
+                    .font(.caption)
+                    .foregroundStyle(.blue)
+                    .padding(.vertical, 2)
             }
             
             HStack(spacing: 15) {

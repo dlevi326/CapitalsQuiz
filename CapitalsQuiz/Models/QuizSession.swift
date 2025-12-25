@@ -13,6 +13,8 @@ struct QuizSession {
     var questions: [QuizQuestion]
     var currentQuestionIndex: Int
     var answers: [String: Bool] // countryName: isCorrect
+    let continent: Continent? // Track which continent filter was used
+    var quitEarly: Bool = false
     
     var currentQuestion: QuizQuestion? {
         guard currentQuestionIndex < questions.count else { return nil }
@@ -28,14 +30,15 @@ struct QuizSession {
     }
     
     var isComplete: Bool {
-        currentQuestionIndex >= questions.count
+        quitEarly || currentQuestionIndex >= questions.count
     }
     
-    init(questions: [QuizQuestion]) {
+    init(questions: [QuizQuestion], continent: Continent? = nil) {
         self.startTime = Date()
         self.questions = questions
         self.currentQuestionIndex = 0
         self.answers = [:]
+        self.continent = continent
     }
     
     mutating func submitAnswer(_ answer: String) -> Bool {

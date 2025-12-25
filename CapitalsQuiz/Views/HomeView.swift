@@ -12,6 +12,16 @@ struct HomeView: View {
     @ObservedObject var statsManager: StatsManager
     @State private var showingStats = false
     @State private var showingResetAlert = false
+    @State private var selectedContinent: Continent? = nil
+    
+    private var questionCount: Int {
+        let availableCountries = if let continent = selectedContinent {
+            CountriesData.allCountries.filter { $0.continent == continent }
+        } else {
+            CountriesData.allCountries
+        }
+        return min(10, max(5, availableCountries.count))
+    }
     
     var body: some View {
         NavigationStack {
@@ -42,10 +52,31 @@ struct HomeView: View {
                 
                 Spacer()
                 
+                // Continent Filter
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Select Continent")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    Picker("Continent", selection: $selectedContinent) {
+                        Text("All Continents").tag(nil as Continent?)
+                        ForEach(Continent.allCases) { continent in
+                            Text(continent.rawValue).tag(continent as Continent?)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .padding(.horizontal)
+                    
+                    Text("\(questionCount) questions")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                }
+                
                 // Buttons
                 VStack(spacing: 15) {
                     Button {
-                        quizManager.startQuiz(questionCount: 10)
+                        quizManager.startQuiz(questionCount: questionCount, continent: selectedContinent)
                     } label: {
                         Label("Start Quiz", systemImage: "play.fill")
                             .font(.title2)

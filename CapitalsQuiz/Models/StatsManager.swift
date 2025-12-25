@@ -10,6 +10,7 @@ import Foundation
 @MainActor
 class StatsManager: ObservableObject {
     @Published private(set) var countryStats: [String: CountryStats] = [:]
+    @Published private(set) var continentStats: [String: ContinentStats] = [:] // Using String key for Codable
     @Published private(set) var totalQuestionsAnswered: Int = 0
     @Published private(set) var totalCorrectAnswers: Int = 0
     @Published private(set) var currentStreak: Int = 0
@@ -18,6 +19,7 @@ class StatsManager: ObservableObject {
     
     private let userDefaults = UserDefaults.standard
     private let statsKey = "countryStats"
+    private let continentStatsKey = "continentStats"
     private let totalQuestionsKey = "totalQuestions"
     private let totalCorrectKey = "totalCorrect"
     private let currentStreakKey = "currentStreak"
@@ -43,6 +45,15 @@ class StatsManager: ObservableObject {
         stats.lastAsked = Date()
         countryStats[country.name] = stats
         
+        // Update continent stats
+        let continentKey = country.continent.rawValue
+        var cStats = continentStats[continentKey] ?? ContinentStats(continent: country.continent)
+        cStats.questionsAnswered += 1
+        if isCorrect {
+            cStats.correctAnswers += 1
+        }
+        continentStats[continentKey] = cStats
+        
         // Update overall stats
         totalQuestionsAnswered += 1
         if isCorrect {
@@ -59,12 +70,15 @@ class StatsManager: ObservableObject {
     }
     
     func recordQuizSession(_ session: QuizSession) {
+        guard !session.quitEarly else { return } // Don't record quit quizzes
+        
         let duration = session.endTime?.timeIntervalSince(session.startTime) ?? 0
         let entry = QuizHistoryEntry(
             date: session.startTime,
             questionsCount: session.totalQuestions,
             correctCount: session.correctCount,
-            duration: duration
+            duration: duration,
+            continent: session.continent
         )
         quizHistory.append(entry)
         
@@ -111,6 +125,10 @@ class StatsManager: ObservableObject {
             userDefaults.set(encoded, forKey: statsKey)
         }
         
+        if let encoded = try? JSONEncoder().encode(continentStats) {
+            userDefaults.set(encoded, forKey: continentStatsKey)
+        }
+        
         userDefaults.set(totalQuestionsAnswered, forKey: totalQuestionsKey)
         userDefaults.set(totalCorrectAnswers, forKey: totalCorrectKey)
         userDefaults.set(currentStreak, forKey: currentStreakKey)
@@ -125,6 +143,11 @@ class StatsManager: ObservableObject {
         if let data = userDefaults.data(forKey: statsKey),
            let decoded = try? JSONDecoder().decode([String: CountryStats].self, from: data) {
             countryStats = decoded
+        }
+        
+        if let data = userDefaults.data(forKey: continentStatsKey),
+           let decoded = try? JSONDecoder().decode([String: ContinentStats].self, from: data) {
+            continentStats = decoded
         }
         
         totalQuestionsAnswered = userDefaults.integer(forKey: totalQuestionsKey)
@@ -145,6 +168,7 @@ struct QuizHistoryEntry: Codable, Identifiable {
     let questionsCount: Int
     let correctCount: Int
     let duration: TimeInterval
+    let continent: Continent?
     
     var accuracy: Double {
         guard questionsCount > 0 else { return 0 }
@@ -152,6 +176,21 @@ struct QuizHistoryEntry: Codable, Identifiable {
     }
     
     enum CodingKeys: String, CodingKey {
-        case date, questionsCount, correctCount, duration
+        case date, questionsCount, correctCount, duration, continent
+    }
+}
+
+struct ContinentStats: Codable {
+    let continentName: String
+    var questionsAnswered: Int = 0
+    var correctAnswers: Int = 0
+    
+    var accuracy: Double {
+        guard questionsAnswered > 0 else { return 0 }
+        return Double(correctAnswers) / Double(questionsAnswered)
+    }
+    
+    init(continent: Continent) {
+        self.continentName = continent.rawValue
     }
 }

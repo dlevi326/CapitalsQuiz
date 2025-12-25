@@ -12,6 +12,7 @@ struct QuizView: View {
     @State private var selectedAnswer: String?
     @State private var showingFeedback = false
     @State private var isCorrect = false
+    @State private var showingQuitAlert = false
     
     var body: some View {
         // Guard against nil session or question
@@ -92,6 +93,24 @@ struct QuizView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    showingQuitAlert = true
+                } label: {
+                    Text("Quit")
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .alert("Quit Quiz?", isPresented: $showingQuitAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Quit", role: .destructive) {
+                quizManager.quitQuiz()
+            }
+        } message: {
+            Text("Your progress will not be saved.")
+        }
         )
     }
     

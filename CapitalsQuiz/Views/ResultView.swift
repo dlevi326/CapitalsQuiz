@@ -25,6 +25,43 @@ struct ResultView: View {
             )
         }
         
+        // Check if quiz was quit early
+        if session.quitEarly {
+            return AnyView(
+                VStack(spacing: 30) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundStyle(.orange)
+                    
+                    Text("Quiz Canceled")
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                    
+                    Text("Your progress was not saved.")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                    
+                    Spacer()
+                    
+                    Button {
+                        quizManager.endQuiz()
+                    } label: {
+                        Text("Return to Home")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundStyle(.white)
+                            .cornerRadius(15)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom, 50)
+                }
+                .padding(.top, 100)
+            )
+        }
+        
         let accuracy = Double(session.correctCount) / Double(session.totalQuestions)
         let duration = session.endTime?.timeIntervalSince(session.startTime) ?? 0
         
@@ -85,7 +122,7 @@ struct ResultView: View {
             // Buttons
             VStack(spacing: 15) {
                 Button {
-                    quizManager.startQuiz(questionCount: 10)
+                    quizManager.startQuiz(questionCount: session.totalQuestions, continent: session.continent)
                 } label: {
                     Label("Try Again", systemImage: "arrow.clockwise")
                         .font(.title3)

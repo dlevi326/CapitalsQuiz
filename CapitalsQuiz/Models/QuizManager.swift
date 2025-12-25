@@ -18,12 +18,22 @@ class QuizManager: ObservableObject {
         self.statsManager = statsManager
     }
     
-    func startQuiz(questionCount: Int = 10) {
-        let selectedCountries = selectCountries(count: questionCount)
-        let questions = selectedCountries.map { country in
-            createQuestion(for: country)
+    func startQuiz(questionCount: Int = 10, continent: Continent? = nil) {
+        // Filter countries by continent if specified
+        let availableCountries = if let continent = continent {
+            CountriesData.allCountries.filter { $0.continent == continent }
+        } else {
+            CountriesData.allCountries
         }
-        currentSession = QuizSession(questions: questions)
+        
+        // Adjust question count based on available countries
+        let adjustedCount = min(questionCount, max(5, availableCountries.count))
+        
+        let selectedCountries = selectCountries(count: adjustedCount, from: availableCountries)
+        let questions = selectedCountries.map { country in
+            createQuestion(for: country, from: availableCountries)
+        }
+        currentSession = QuizSession(questions: questions, continent: continent)
         showingResults = false
     }
     
@@ -32,13 +42,33 @@ class QuizManager: ObservableObject {
         guard let question = session.currentQuestion else { return }
         
         let isCorrect = session.submitAnswer(answer)
-        statsManager.recordAnswer(for: question.country, isCorrect: isCorrect)
         
         currentSession = session
         
-        if session.isComplete {
+        if session.isComplete && !session.quitEarly {
+            // Only commit stats when quiz completes naturally (not quit)
+            commitStatsForSession(session)
             statsManager.recordQuizSession(session)
             showingResults = true
+        }
+    }
+    
+    func quitQuiz() {
+        guard var session = currentSession else { return }
+        
+        session.quitEarly = true
+        session.endTime = Date()
+        currentSession = session
+        showingResults = true
+        // Stats are NOT committed when quitting
+    }
+    
+    private func commitStatsForSession(_ session: QuizSession) {
+        // Commit all answers to stats
+        for question in session.questions {
+            if let isCorrect = session.answers[question.country.name] {
+                statsManager.recordAnswer(for: question.country, isCorrect: isCorrect)
+            }
         }
     }
     
@@ -48,14 +78,18 @@ class QuizManager: ObservableObject {
     }
     
     // Adaptive country selection algorithm
-    private func selectCountries(count: Int) -> [Country] {
+    private func selectCountries(count: Int, from availableCountries: [Country]) -> [Country] {
         var selectedCountries: [Country] = []
         
-        // Get never-asked countries
-        let neverAsked = statsManager.getNeverAskedCountries()
+        // Get never-asked countries from available pool
+        let neverAsked = statsManager.getNeverAskedCountries().filter { country in
+            availableCountries.contains { $0.id == country.id }
+        }
         
-        // Get weakest countries (low accuracy)
-        let weakest = statsManager.getWeakestCountries(limit: count)
+        // Get weakest countries from available pool
+        let weakest = statsManager.getWeakestCountries(limit: count).filter { country in
+            availableCountries.contains { $0.id == country.id }
+        }
         
         // Strategy: 
         // - 50% from weakest countries (if available)
@@ -72,8 +106,8 @@ class QuizManager: ObservableObject {
         // Add never asked countries
         selectedCountries.append(contentsOf: neverAsked.shuffled().prefix(neverAskedCount))
         
-        // Fill remaining with random countries
-        let remaining = CountriesData.allCountries.filter { country in
+        // Fill remaining with random countries from available pool
+        let remaining = availableCountries.filter { country in
             !selectedCountries.contains { $0.id == country.id }
         }
         selectedCountries.append(contentsOf: remaining.shuffled().prefix(randomCount))
@@ -81,9 +115,9 @@ class QuizManager: ObservableObject {
         return selectedCountries.shuffled()
     }
     
-    private func createQuestion(for country: Country) -> QuizQuestion {
-        // Get 3 random wrong answers
-        var wrongCapitals = CountriesData.allCountries
+    private func createQuestion(for country: Country, from availableCountries: [Country]) -> QuizQuestion {
+        // Get 3 random wrong answers from the available country pool
+        var wrongCapitals = availableCountries
             .filter { $0.capital != country.capital }
             .map { $0.capital }
             .shuffled()
