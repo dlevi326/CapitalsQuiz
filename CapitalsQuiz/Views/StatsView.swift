@@ -14,38 +14,54 @@ struct StatsView: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
-                // Tab Picker
-                Picker("Stats View", selection: $selectedTab) {
-                    Text("Overview").tag(0)
-                    Text("Countries").tag(1)
-                    Text("History").tag(2)
-                }
-                .pickerStyle(.segmented)
-                .padding()
+            ZStack {
+                Theme.Gradients.backgroundTop.ignoresSafeArea()
                 
-                // Content
-                TabView(selection: $selectedTab) {
-                    OverviewTab(statsManager: statsManager)
-                        .tag(0)
-                    
-                    CountriesTab(statsManager: statsManager)
-                        .tag(1)
-                    
-                    HistoryTab(statsManager: statsManager)
-                        .tag(2)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-            }
-            .navigationTitle("Statistics")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        dismiss()
+                VStack(spacing: 0) {
+                    // Header with gradient text
+                    HStack {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            Text("Statistics")
+                                .font(Theme.Typography.largeTitle)
+                                .foregroundStyle(Theme.Gradients.primary)
+                            Text("Track your progress")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                        }
+                        Spacer()
+                        Button("Done") {
+                            dismiss()
+                        }
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Gradients.primary)
                     }
+                    .padding()
+                    
+                    // Animated Tab Picker
+                    Picker("Stats View", selection: $selectedTab.animation(Theme.Animation.smooth)) {
+                        Label("Overview", systemImage: "chart.bar.fill").tag(0)
+                        Label("Countries", systemImage: "globe.americas.fill").tag(1)
+                        Label("History", systemImage: "clock.fill").tag(2)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.bottom, Theme.Spacing.sm)
+                    
+                    // Content with smooth transitions
+                    TabView(selection: $selectedTab) {
+                        OverviewTab(statsManager: statsManager)
+                            .tag(0)
+                        
+                        CountriesTab(statsManager: statsManager)
+                            .tag(1)
+                        
+                        HistoryTab(statsManager: statsManager)
+                            .tag(2)
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
                 }
             }
+            .navigationBarHidden(true)
         }
     }
 }
@@ -68,62 +84,71 @@ struct OverviewTab: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // Continent Filter
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Filter by Continent")
-                        .font(.headline)
-                        .padding(.horizontal)
+            VStack(spacing: Theme.Spacing.lg) {
+                // Continent Filter Card
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    HStack {
+                        Text("Filter by Region")
+                            .font(Theme.Typography.headline)
+                            .foregroundStyle(Theme.Gradients.primary)
+                        Spacer()
+                        Text(getEmoji(for: selectedContinent))
+                            .font(.title2)
+                    }
                     
-                    Picker("Continent", selection: $selectedContinent) {
-                        Text("All Continents").tag(nil as Continent?)
+                    Picker("Continent", selection: $selectedContinent.animation(Theme.Animation.smooth)) {
+                        Text("🌎 All Continents").tag(nil as Continent?)
                         ForEach(Continent.allCases) { continent in
-                            Text(continent.rawValue).tag(continent as Continent?)
+                            Text("\(getEmoji(for: continent)) \(continent.rawValue)").tag(continent as Continent?)
                         }
                     }
                     .pickerStyle(.menu)
-                    .padding(.horizontal)
+                    .tint(Theme.Colors.primaryPurple)
                 }
+                .padding(Theme.Spacing.lg)
+                .cardStyle()
+                .padding(.horizontal)
                 
                 // Overall Stats
-                VStack(alignment: .leading, spacing: 15) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     Text(selectedContinent == nil ? "Overall Performance" : "\(selectedContinent!.rawValue) Performance")
-                        .font(.headline)
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Gradients.primary)
                         .padding(.horizontal)
                     
-                    VStack(spacing: 12) {
-                        StatsCard(
+                    VStack(spacing: Theme.Spacing.md) {
+                        ModernStatsCard(
                             icon: "number",
-                            color: .blue,
+                            gradient: Theme.Gradients.primary,
                             title: "Total Questions",
                             value: "\(filteredStats.questions)"
                         )
                         
-                        StatsCard(
+                        ModernStatsCard(
                             icon: "checkmark.circle.fill",
-                            color: .green,
+                            gradient: Theme.Gradients.success,
                             title: "Correct Answers",
                             value: "\(filteredStats.correct)"
                         )
                         
-                        StatsCard(
-                            icon: "percent",
-                            color: .purple,
+                        ModernStatsCard(
+                            icon: "target",
+                            gradient: LinearGradient(colors: [Theme.Colors.primaryPurple, Theme.Colors.accentPink], startPoint: .leading, endPoint: .trailing),
                             title: "Accuracy",
                             value: String(format: "%.1f%%", filteredStats.accuracy * 100)
                         )
                         
                         if selectedContinent == nil {
-                            StatsCard(
+                            ModernStatsCard(
                                 icon: "flame.fill",
-                                color: .orange,
+                                gradient: Theme.Gradients.warning,
                                 title: "Current Streak",
                                 value: "\(statsManager.currentStreak)"
                             )
                             
-                            StatsCard(
+                            ModernStatsCard(
                                 icon: "trophy.fill",
-                                color: .yellow,
+                                gradient: LinearGradient(colors: [Theme.Colors.accentYellow, Theme.Colors.warningOrange], startPoint: .leading, endPoint: .trailing),
                                 title: "Best Streak",
                                 value: "\(statsManager.longestStreak)"
                             )
@@ -133,9 +158,10 @@ struct OverviewTab: View {
                 }
                 
                 // Countries Progress
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Progress")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    Text("Learning Progress")
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Gradients.primary)
                         .padding(.horizontal)
                     
                     let allCountriesFiltered = selectedContinent == nil ? CountriesData.allCountries : CountriesData.allCountries.filter { $0.continent == selectedContinent }
@@ -147,32 +173,27 @@ struct OverviewTab: View {
                         stat.accuracy >= 0.8 && stat.timesAsked >= 3 && allCountriesFiltered.contains { $0.name == stat.countryName }
                     }.count
                     
-                    VStack(spacing: 12) {
-                        StatsCard(
-                            icon: "globe.americas.fill",
-                            color: .blue,
-                            title: "Total Countries",
-                            value: "\(totalCountries)"
-                        )
-                        
-                        StatsCard(
-                            icon: "eye.fill",
-                            color: .green,
-                            title: "Countries Seen",
-                            value: "\(askedCountries)"
-                        )
-                        
-                        StatsCard(
-                            icon: "star.fill",
-                            color: .yellow,
-                            title: "Countries Mastered",
-                            value: "\(masteredCountries)"
-                        )
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                        ProgressCard(icon: "globe.americas.fill", gradient: Theme.Gradients.primary, title: "Total", value: "\(totalCountries)")
+                        ProgressCard(icon: "eye.fill", gradient: Theme.Gradients.success, title: "Seen", value: "\(askedCountries)")
+                        ProgressCard(icon: "star.fill", gradient: LinearGradient(colors: [Theme.Colors.accentYellow, Theme.Colors.warningOrange], startPoint: .topLeading, endPoint: .bottomTrailing), title: "Mastered", value: "\(masteredCountries)")
                     }
                     .padding(.horizontal)
                 }
             }
             .padding(.vertical)
+        }
+    }
+    
+    private func getEmoji(for continent: Continent?) -> String {
+        guard let continent = continent else { return "🌎" }
+        switch continent {
+        case .africa: return "🌍"
+        case .asia: return "🌏"
+        case .europe: return "🇪🇺"
+        case .northAmerica: return "🌎"
+        case .southAmerica: return "🗺️"
+        case .oceania: return "🏝️"
         }
     }
 }
@@ -217,32 +238,50 @@ struct CountriesTab: View {
     }
     
     var body: some View {
-        VStack {
-            // Continent Filter
-            Picker("Continent", selection: $selectedContinent) {
-                Text("All Continents").tag(nil as Continent?)
-                ForEach(Continent.allCases) { continent in
-                    Text(continent.rawValue).tag(continent as Continent?)
+        VStack(spacing: Theme.Spacing.sm) {
+            // Filters Card
+            VStack(spacing: Theme.Spacing.md) {
+                // Continent Filter
+                Picker("Continent", selection: $selectedContinent.animation(Theme.Animation.smooth)) {
+                    Text("🌎 All Continents").tag(nil as Continent?)
+                    ForEach(Continent.allCases) { continent in
+                        Text(getEmoji(for: continent) + " " + continent.rawValue).tag(continent as Continent?)
+                    }
                 }
+                .pickerStyle(.menu)
+                .tint(Theme.Colors.primaryPurple)
+                
+                // Sort Picker
+                Picker("Sort By", selection: $sortOrder.animation(Theme.Animation.smooth)) {
+                    Text("Accuracy").tag(SortOrder.accuracy)
+                    Text("Name").tag(SortOrder.name)
+                    Text("Times Asked").tag(SortOrder.timesAsked)
+                }
+                .pickerStyle(.segmented)
             }
-            .pickerStyle(.menu)
             .padding(.horizontal)
-            
-            // Sort Picker
-            Picker("Sort By", selection: $sortOrder) {
-                Text("Accuracy").tag(SortOrder.accuracy)
-                Text("Name").tag(SortOrder.name)
-                Text("Times Asked").tag(SortOrder.timesAsked)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
+            .padding(.top, Theme.Spacing.sm)
             
             List {
                 ForEach(sortedCountries, id: \.country.id) { item in
-                    CountryStatsRow(country: item.country, stats: item.stats)
+                    ModernCountryStatsRow(country: item.country, stats: item.stats)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
             }
+            .listStyle(.plain)
             .searchable(text: $searchText, prompt: "Search countries or capitals")
+        }
+    }
+    
+    private func getEmoji(for continent: Continent) -> String {
+        switch continent {
+        case .africa: return "🌍"
+        case .asia: return "🌏"
+        case .europe: return "🇪🇺"
+        case .northAmerica: return "🌎"
+        case .southAmerica: return "🗺️"
+        case .oceania: return "🏝️"
         }
     }
 }
@@ -288,20 +327,109 @@ struct CountryStatsRow: View {
     }
 }
 
-struct HistoryTab: View {
-    @ObservedObject var statsManager: StatsManager
+struct ModernCountryStatsRow: View {
+    let country: Country
+    let stats: CountryStats?
     
     var body: some View {
-        List {
-            if statsManager.quizHistory.isEmpty {
-                Text("No quiz history yet")
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-            } else {
-                ForEach(statsManager.quizHistory.reversed()) { entry in
-                    HistoryRow(entry: entry)
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(country.name)
+                        .font(Theme.Typography.headline)
+                    
+                    Text(country.capital)
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(Theme.Colors.textSecondary)
                 }
+                
+                Spacer()
+                
+                if let stats = stats {
+                    if stats.accuracy >= 0.8 && stats.timesAsked >= 3 {
+                        Text("✨")
+                            .font(.title2)
+                    }
+                }
+            }
+            
+            if let stats = stats {
+                HStack(spacing: Theme.Spacing.md) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "number")
+                            .font(.caption)
+                        Text("\(stats.timesAsked)")
+                            .font(Theme.Typography.caption)
+                    }
+                    .foregroundStyle(Theme.Gradients.primary)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "target")
+                            .font(.caption)
+                        Text(String(format: "%.0f%%", stats.accuracy * 100))
+                            .font(Theme.Typography.caption)
+                    }
+                    .foregroundStyle(stats.accuracy >= 0.8 ? Theme.Gradients.success : stats.accuracy >= 0.5 ? Theme.Gradients.warning : Theme.Gradients.error)
+                }
+            } else {
+                Text("Not yet asked")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .padding(Theme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, Theme.Spacing.xs)
+    }
+}
+
+struct HistoryTab: View {
+    @ObservedObject var statsManager: StatsManager
+    @State private var emptyStateScale: CGFloat = 0.8
+    
+    var body: some View {
+        Group {
+            if statsManager.quizHistory.isEmpty {
+                VStack(spacing: Theme.Spacing.lg) {
+                    Spacer()
+                    
+                    Text("📚")
+                        .font(.system(size: 100))
+                        .scaleEffect(emptyStateScale)
+                        .onAppear {
+                            withAnimation(
+                                .spring(response: 0.6, dampingFraction: 0.5)
+                                .repeatForever(autoreverses: true)
+                            ) {
+                                emptyStateScale = 1.0
+                            }
+                        }
+                    
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Text("No Quiz History Yet")
+                            .font(Theme.Typography.title)
+                            .foregroundStyle(Theme.Gradients.primary)
+                        
+                        Text("Complete a quiz to see your history here!")
+                            .font(Theme.Typography.callout)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    
+                    Spacer()
+                }
+                .padding()
+            } else {
+                List {
+                    ForEach(statsManager.quizHistory.reversed()) { entry in
+                        ModernHistoryRow(entry: entry)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                    }
+                }
+                .listStyle(.plain)
             }
         }
     }
@@ -357,6 +485,80 @@ struct HistoryRow: View {
     }
 }
 
+struct ModernHistoryRow: View {
+    let entry: QuizHistoryEntry
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(entry.date, style: .date)
+                        .font(Theme.Typography.headline)
+                    Text(entry.date, style: .time)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+                
+                Spacer()
+                
+                if let continent = entry.continent {
+                    Text(getContinentEmoji(for: continent))
+                        .font(.title2)
+                }
+            }
+            
+            HStack(spacing: Theme.Spacing.md) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("\(entry.correctCount)/\(entry.questionsCount)")
+                        .font(Theme.Typography.caption)
+                }
+                .foregroundStyle(Theme.Gradients.success)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "target")
+                    Text(String(format: "%.0f%%", entry.accuracy * 100))
+                        .font(Theme.Typography.caption)
+                }
+                .foregroundStyle(Theme.Gradients.primary)
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                    Text(formatDuration(entry.duration))
+                        .font(Theme.Typography.caption)
+                }
+                .foregroundStyle(Theme.Gradients.warning)
+            }
+        }
+        .padding(Theme.Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+        .padding(.horizontal, Theme.Spacing.sm)
+        .padding(.vertical, Theme.Spacing.xs)
+    }
+    
+    private func getContinentEmoji(for continent: Continent) -> String {
+        switch continent {
+        case .africa: return "🌍"
+        case .asia: return "🌏"
+        case .europe: return "🇪🇺"
+        case .northAmerica: return "🌎"
+        case .southAmerica: return "🗺️"
+        case .oceania: return "🏝️"
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        if minutes > 0 {
+            return "\(minutes)m \(seconds)s"
+        } else {
+            return "\(seconds)s"
+        }
+    }
+}
+
 struct StatsCard: View {
     let icon: String
     let color: Color
@@ -384,6 +586,63 @@ struct StatsCard: View {
         .padding()
         .background(Color(uiColor: .systemGray6))
         .cornerRadius(12)
+    }
+}
+
+struct ModernStatsCard: View {
+    let icon: String
+    let gradient: LinearGradient
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Image(systemName: icon)
+                .font(.title)
+                .foregroundStyle(gradient)
+                .frame(width: 50)
+            
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(title)
+                    .font(Theme.Typography.subheadline)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                Text(value)
+                    .font(Theme.Typography.title2)
+                    .fontWeight(.bold)
+            }
+            
+            Spacer()
+        }
+        .padding(Theme.Spacing.lg)
+        .gradientCardStyle(gradient: Theme.Gradients.quizCard)
+    }
+}
+
+struct ProgressCard: View {
+    let icon: String
+    let gradient: LinearGradient
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 40))
+                .foregroundStyle(gradient)
+            
+            VStack(spacing: Theme.Spacing.xs) {
+                Text(value)
+                    .font(Theme.Typography.title)
+                    .fontWeight(.bold)
+                
+                Text(title)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Theme.Spacing.lg)
+        .gradientCardStyle(gradient: Theme.Gradients.quizCard)
     }
 }
 

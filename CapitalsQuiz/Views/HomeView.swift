@@ -13,6 +13,8 @@ struct HomeView: View {
     @State private var showingStats = false
     @State private var showingResetAlert = false
     @State private var selectedContinent: Continent? = nil
+    @State private var globeScale: CGFloat = 1.0
+    @State private var buttonPressed: String? = nil
     
     private var questionCount: Int {
         let availableCountries = if let continent = selectedContinent {
@@ -25,95 +27,204 @@ struct HomeView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 30) {
-                // Header
-                VStack(spacing: 10) {
-                    Image(systemName: "globe.americas.fill")
-                        .font(.system(size: 80))
-                        .foregroundStyle(.blue)
-                    
-                    Text("Capitals Quiz")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
-                }
-                .padding(.top, 50)
+            ZStack {
+                // Background gradient
+                Theme.Gradients.backgroundTop
+                    .ignoresSafeArea()
                 
-                // Stats Overview
-                VStack(spacing: 15) {
-                    StatRow(label: "Questions Answered", value: "\(statsManager.totalQuestionsAnswered)")
-                    StatRow(label: "Accuracy", value: String(format: "%.1f%%", statsManager.overallAccuracy * 100))
-                    StatRow(label: "Current Streak", value: "\(statsManager.currentStreak)")
-                    StatRow(label: "Best Streak", value: "\(statsManager.longestStreak)")
-                }
-                .padding()
-                .background(Color(uiColor: .systemGray6))
-                .cornerRadius(15)
-                .padding(.horizontal)
+                // Floating particles background
+                FloatingParticlesView()
+                    .ignoresSafeArea()
+                    .opacity(0.3)
                 
-                Spacer()
-                
-                // Continent Filter
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Select Continent")
-                        .font(.headline)
-                        .padding(.horizontal)
-                    
-                    Picker("Continent", selection: $selectedContinent) {
-                        Text("All Continents").tag(nil as Continent?)
-                        ForEach(Continent.allCases) { continent in
-                            Text(continent.rawValue).tag(continent as Continent?)
+                ScrollView {
+                    VStack(spacing: Theme.Spacing.lg) {
+                        // Header with animated globe
+                        VStack(spacing: Theme.Spacing.md) {
+                            Text("🌍")
+                                .font(.system(size: 100))
+                                .scaleEffect(globeScale)
+                                .shadow(
+                                    color: Theme.Colors.primaryBlue.opacity(0.3),
+                                    radius: 20,
+                                    x: 0,
+                                    y: 10
+                                )
+                                .onAppear {
+                                    withAnimation(
+                                        .spring(response: 0.6, dampingFraction: 0.5)
+                                        .repeatForever(autoreverses: true)
+                                    ) {
+                                        globeScale = 1.1
+                                    }
+                                }
+                            
+                            Text("Capitals Quiz")
+                                .font(Theme.Typography.heroTitle)
+                                .foregroundStyle(Theme.Gradients.primary)
+                            
+                            Text("Test your geography knowledge!")
+                                .font(Theme.Typography.callout)
+                                .foregroundStyle(Theme.Colors.textSecondary)
                         }
-                    }
-                    .pickerStyle(.menu)
-                    .padding(.horizontal)
-                    
-                    Text("\(questionCount) questions")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .padding(.top, Theme.Spacing.xl)
+                        
+                        // Stats Overview Card
+                        VStack(spacing: Theme.Spacing.md) {
+                            HStack {
+                                Text("Your Progress")
+                                    .font(Theme.Typography.title3)
+                                    .foregroundStyle(Theme.Gradients.primary)
+                                Spacer()
+                                Text("✨")
+                                    .font(.title)
+                            }
+                            
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                                StatCard(
+                                    icon: "checkmark.circle.fill",
+                                    label: "Answered",
+                                    value: "\(statsManager.totalQuestionsAnswered)",
+                                    gradient: Theme.Gradients.primary
+                                )
+                                
+                                StatCard(
+                                    icon: "target",
+                                    label: "Accuracy",
+                                    value: String(format: "%.1f%%", statsManager.overallAccuracy * 100),
+                                    gradient: Theme.Gradients.success
+                                )
+                                
+                                StatCard(
+                                    icon: "flame.fill",
+                                    label: "Current Streak",
+                                    value: "\(statsManager.currentStreak)",
+                                    gradient: Theme.Gradients.warning
+                                )
+                                
+                                StatCard(
+                                    icon: "trophy.fill",
+                                    label: "Best Streak",
+                                    value: "\(statsManager.longestStreak)",
+                                    gradient: Theme.Gradients.celebration
+                                )
+                            }
+                        }
+                        .padding(Theme.Spacing.lg)
+                        .gradientCardStyle(gradient: Theme.Gradients.quizCard)
                         .padding(.horizontal)
+                        
+                        // Continent Filter Card
+                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                            HStack {
+                                Text("Select Region")
+                                    .font(Theme.Typography.title3)
+                                    .foregroundStyle(Theme.Gradients.primary)
+                                Spacer()
+                                Text(continentEmoji(for: selectedContinent))
+                                    .font(.title)
+                            }
+                            
+                            Picker("Continent", selection: $selectedContinent) {
+                                Text("🌎 All Continents").tag(nil as Continent?)
+                                ForEach(Continent.allCases) { continent in
+                                    Text("\(continentEmoji(for: continent)) \(continent.rawValue)").tag(continent as Continent?)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Theme.Colors.primaryPurple)
+                            
+                            HStack {
+                                Image(systemName: "questionmark.circle.fill")
+                                    .foregroundStyle(Theme.Gradients.primary)
+                                Text("\(questionCount) questions available")
+                                    .font(Theme.Typography.caption)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+                        .padding(Theme.Spacing.lg)
+                        .cardStyle()
+                        .padding(.horizontal)
+                        
+                        // Action Buttons
+                        VStack(spacing: Theme.Spacing.md) {
+                            Button {
+                                buttonPressed = "start"
+                                withAnimation(Theme.Animation.bouncy) {
+                                    buttonPressed = nil
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    quizManager.startQuiz(questionCount: questionCount, continent: selectedContinent)
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "play.fill")
+                                    Text("Start Quiz")
+                                }
+                                .font(Theme.Typography.title2)
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(Theme.Spacing.lg)
+                                .background(Theme.Gradients.primary)
+                                .cornerRadius(Theme.CornerRadius.md)
+                                .shadow(
+                                    color: Theme.Colors.primaryBlue.opacity(0.4),
+                                    radius: Theme.Shadow.colored.radius,
+                                    x: Theme.Shadow.colored.x,
+                                    y: Theme.Shadow.colored.y
+                                )
+                            }
+                            .scaleEffect(buttonPressed == "start" ? 0.95 : 1.0)
+                            .sensoryFeedback(.impact, trigger: buttonPressed == "start")
+                            
+                            HStack(spacing: Theme.Spacing.md) {
+                                Button {
+                                    buttonPressed = "stats"
+                                    withAnimation(Theme.Animation.bouncy) {
+                                        buttonPressed = nil
+                                    }
+                                    showingStats = true
+                                } label: {
+                                    VStack(spacing: Theme.Spacing.sm) {
+                                        Image(systemName: "chart.bar.fill")
+                                            .font(.title)
+                                        Text("Statistics")
+                                            .font(Theme.Typography.footnote)
+                                    }
+                                    .foregroundStyle(Theme.Gradients.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .cardStyle()
+                                }
+                                .scaleEffect(buttonPressed == "stats" ? 0.95 : 1.0)
+                                .sensoryFeedback(.impact, trigger: buttonPressed == "stats")
+                                
+                                Button {
+                                    buttonPressed = "reset"
+                                    withAnimation(Theme.Animation.bouncy) {
+                                        buttonPressed = nil
+                                    }
+                                    showingResetAlert = true
+                                } label: {
+                                    VStack(spacing: Theme.Spacing.sm) {
+                                        Image(systemName: "arrow.counterclockwise")
+                                            .font(.title)
+                                        Text("Reset")
+                                            .font(Theme.Typography.footnote)
+                                    }
+                                    .foregroundStyle(Theme.Gradients.error)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .cardStyle()
+                                }
+                                .scaleEffect(buttonPressed == "reset" ? 0.95 : 1.0)
+                                .sensoryFeedback(.impact, trigger: buttonPressed == "reset")
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, Theme.Spacing.xl)
+                    }
                 }
-                
-                // Buttons
-                VStack(spacing: 15) {
-                    Button {
-                        quizManager.startQuiz(questionCount: questionCount, continent: selectedContinent)
-                    } label: {
-                        Label("Start Quiz", systemImage: "play.fill")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundStyle(.white)
-                            .cornerRadius(15)
-                    }
-                    
-                    Button {
-                        showingStats = true
-                    } label: {
-                        Label("View Statistics", systemImage: "chart.bar.fill")
-                            .font(.title3)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(uiColor: .systemGray5))
-                            .foregroundStyle(.primary)
-                            .cornerRadius(15)
-                    }
-                    
-                    Button {
-                        showingResetAlert = true
-                    } label: {
-                        Label("Reset Stats", systemImage: "arrow.counterclockwise")
-                            .font(.title3)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color(uiColor: .systemGray5))
-                            .foregroundStyle(.red)
-                            .cornerRadius(15)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 50)
             }
             .navigationTitle("")
             .navigationBarHidden(true)
@@ -127,6 +238,71 @@ struct HomeView: View {
                 }
             } message: {
                 Text("Are you sure you want to reset all your statistics? This cannot be undone.")
+            }
+        }
+    }
+    
+    private func continentEmoji(for continent: Continent?) -> String {
+        guard let continent = continent else { return "🌎" }
+        switch continent {
+        case .africa: return "🌍"
+        case .asia: return "🌏"
+        case .europe: return "🇪🇺"
+        case .northAmerica: return "🌎"
+        case .southAmerica: return "🗺️"
+        case .oceania: return "🏝️"
+        }
+    }
+}
+
+struct StatCard: View {
+    let icon: String
+    let label: String
+    let value: String
+    let gradient: LinearGradient
+    
+    var body: some View {
+        VStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.title)
+                .foregroundStyle(gradient)
+            
+            Text(value)
+                .font(Theme.Typography.title)
+                .fontWeight(.bold)
+            
+            Text(label)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(Theme.CornerRadius.md)
+    }
+}
+
+struct FloatingParticlesView: View {
+    @State private var animate = false
+    
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let now = timeline.date.timeIntervalSinceReferenceDate
+                
+                for i in 0..<15 {
+                    let x = (sin(now * 0.5 + Double(i)) * 0.5 + 0.5) * size.width
+                    let y = (cos(now * 0.3 + Double(i) * 0.5) * 0.5 + 0.5) * size.height
+                    let radius = 3.0 + sin(now * 0.7 + Double(i)) * 2
+                    
+                    let opacity = 0.2 + sin(now * 0.4 + Double(i)) * 0.1
+                    
+                    context.opacity = opacity
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
+                        with: .color(i % 3 == 0 ? Theme.Colors.primaryBlue : i % 3 == 1 ? Theme.Colors.primaryPurple : Theme.Colors.accentTeal)
+                    )
+                }
             }
         }
     }
@@ -152,3 +328,4 @@ struct StatRow: View {
     let quizManager = QuizManager(statsManager: statsManager)
     return HomeView(quizManager: quizManager, statsManager: statsManager)
 }
+
