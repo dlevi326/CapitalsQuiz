@@ -93,6 +93,8 @@ struct QuizView: View {
                             .font(Theme.Typography.heroTitle)
                             .foregroundStyle(Theme.Gradients.primary)
                             .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.5)
                             .padding(.horizontal)
                     }
                     .padding(Theme.Spacing.xl)
@@ -156,7 +158,7 @@ struct QuizView: View {
                             )
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, Theme.Spacing.lg)
+                        .padding(.bottom, 40)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                         .sensoryFeedback(.success, trigger: showingFeedback)
                     }
@@ -184,6 +186,7 @@ struct QuizView: View {
                     Text("Your progress will not be saved.")
                 }
             }
+            .safeAreaPadding(.bottom)
         )
     }
     
@@ -270,6 +273,8 @@ struct AnswerButton: View {
                 Text(text)
                     .font(Theme.Typography.title3)
                     .multilineTextAlignment(.leading)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 
                 Spacer()
                 

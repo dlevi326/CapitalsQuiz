@@ -337,10 +337,14 @@ struct ModernCountryStatsRow: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(country.name)
                         .font(Theme.Typography.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     
                     Text(country.capital)
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(Theme.Colors.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 
                 Spacer()
