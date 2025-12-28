@@ -13,9 +13,11 @@ class QuizManager: ObservableObject {
     @Published var showingResults = false
     
     let statsManager: StatsManager
+    let quizType: QuizType
     
-    init(statsManager: StatsManager) {
+    init(statsManager: StatsManager, quizType: QuizType = .countryCapitals) {
         self.statsManager = statsManager
+        self.quizType = quizType
     }
     
     func startQuiz(questionCount: Int = 10, continent: Continent? = nil) {
@@ -33,7 +35,12 @@ class QuizManager: ObservableObject {
         let questions = selectedCountries.map { country in
             createQuestion(for: country, from: availableCountries)
         }
-        currentSession = QuizSession(questions: questions, continent: continent)
+        currentSession = QuizSession(
+            questions: questions,
+            continent: continent,
+            categoryFilter: continent?.rawValue,
+            quizType: quizType
+        )
         showingResults = false
     }
     
@@ -48,7 +55,7 @@ class QuizManager: ObservableObject {
         if session.isComplete && !session.quitEarly {
             // Only commit stats when quiz completes naturally (not quit)
             commitStatsForSession(session)
-            statsManager.recordQuizSession(session)
+            statsManager.recordQuizSession(session, quizType: quizType)
             showingResults = true
         }
     }
@@ -67,7 +74,12 @@ class QuizManager: ObservableObject {
         // Commit all answers to stats
         for question in session.questions {
             if let isCorrect = session.answers[question.country.name] {
-                statsManager.recordAnswer(for: question.country, isCorrect: isCorrect)
+                statsManager.recordAnswer(
+                    for: question.country,
+                    isCorrect: isCorrect,
+                    quizType: quizType,
+                    category: question.country.continent.rawValue
+                )
             }
         }
     }
@@ -123,6 +135,11 @@ class QuizManager: ObservableObject {
             .shuffled()
             .prefix(3)
         
-        return QuizQuestion(country: country, wrongAnswers: Array(wrongCapitals))
+        return QuizQuestion(
+            country: country,
+            wrongAnswers: Array(wrongCapitals),
+            questionFormat: quizType.questionFormat
+        )
     }
 }
+

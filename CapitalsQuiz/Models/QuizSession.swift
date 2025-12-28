@@ -13,7 +13,9 @@ struct QuizSession {
     var questions: [QuizQuestion]
     var currentQuestionIndex: Int
     var answers: [String: Bool] // countryName: isCorrect
-    let continent: Continent? // Track which continent filter was used
+    let continent: Continent? // Track which continent filter was used (for backward compatibility)
+    let categoryFilter: String? // Generic category filter
+    let quizType: QuizType
     var quitEarly: Bool = false
     
     var currentQuestion: QuizQuestion? {
@@ -33,12 +35,14 @@ struct QuizSession {
         quitEarly || currentQuestionIndex >= questions.count
     }
     
-    init(questions: [QuizQuestion], continent: Continent? = nil) {
+    init(questions: [QuizQuestion], continent: Continent? = nil, categoryFilter: String? = nil, quizType: QuizType = .countryCapitals) {
         self.startTime = Date()
         self.questions = questions
         self.currentQuestionIndex = 0
         self.answers = [:]
         self.continent = continent
+        self.categoryFilter = categoryFilter ?? continent?.rawValue
+        self.quizType = quizType
     }
     
     mutating func submitAnswer(_ answer: String) -> Bool {
@@ -55,3 +59,4 @@ struct QuizSession {
         return isCorrect
     }
 }
+

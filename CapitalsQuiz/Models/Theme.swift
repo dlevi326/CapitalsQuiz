@@ -29,8 +29,8 @@ struct Theme {
         static let errorPink = Color(red: 1.0, green: 0.18, blue: 0.33) // #FF2D54
         
         // Neutral Colors
-        static let cardBackground = Color(uiColor: .systemGray6)
-        static let cardBackgroundDark = Color(uiColor: .systemGray5)
+        static let cardBackground = Color(white: 0.95) // Light gray similar to systemGray6
+        static let cardBackgroundDark = Color(white: 0.90) // Slightly darker gray similar to systemGray5
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
         

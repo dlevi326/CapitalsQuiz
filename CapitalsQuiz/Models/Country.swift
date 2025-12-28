@@ -18,7 +18,7 @@ enum Continent: String, Codable, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
-struct Country: Identifiable, Codable, Hashable {
+struct Country: Identifiable, Codable, Hashable, Quizzable {
     let id: String
     let name: String
     let capital: String
@@ -30,4 +30,9 @@ struct Country: Identifiable, Codable, Hashable {
         self.capital = capital
         self.continent = continent
     }
+    
+    // Quizzable conformance
+    var displayName: String { name }
+    var answer: String { capital }
+    var category: String { continent.rawValue }
 }

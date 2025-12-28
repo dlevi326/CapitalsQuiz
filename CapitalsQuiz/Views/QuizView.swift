@@ -39,7 +39,7 @@ struct QuizView: View {
                 Theme.Gradients.backgroundTop
                     .ignoresSafeArea()
                 
-                VStack(spacing: Theme.Spacing.lg) {
+                VStack(spacing: 0) {
                     // Animated Progress Bar with gradient
                     VStack(spacing: Theme.Spacing.sm) {
                         HStack {
@@ -77,90 +77,91 @@ struct QuizView: View {
                     .padding(.horizontal)
                     .padding(.top, Theme.Spacing.sm)
                     
-                    Spacer()
-                    
-                    // Question Card with animation
-                    VStack(spacing: Theme.Spacing.md) {
-                        Text("🌍")
-                            .font(.system(size: 50))
-                            .scaleEffect(questionScale)
-                        
-                        Text("What is the capital of")
-                            .font(Theme.Typography.title3)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                        
-                        Text(currentQuestion.country.name)
-                            .font(Theme.Typography.heroTitle)
-                            .foregroundStyle(Theme.Gradients.primary)
-                            .multilineTextAlignment(.center)
-                            .lineLimit(3)
-                            .minimumScaleFactor(0.5)
-                            .padding(.horizontal)
-                    }
-                    .padding(Theme.Spacing.xl)
-                    .frame(maxWidth: .infinity)
-                    .gradientCardStyle(gradient: Theme.Gradients.quizCard)
-                    .padding(.horizontal)
-                    .scaleEffect(questionScale)
-                    .opacity(questionOpacity)
-                    .offset(x: questionOffset)
-                    .id(currentQuestion.country.name)
-                    .transition(.asymmetric(
-                        insertion: .scale.combined(with: .opacity),
-                        removal: .scale.combined(with: .opacity)
-                    ))
-                    
-                    Spacer()
-                    
-                    // Answer Options with bounce animations
-                    VStack(spacing: Theme.Spacing.md) {
-                        ForEach(Array(currentQuestion.options.enumerated()), id: \.element) { index, option in
-                            AnswerButton(
-                                text: option,
-                                isSelected: selectedAnswer == option,
-                                isCorrect: showingFeedback && option == currentQuestion.correctAnswer,
-                                isWrong: showingFeedback && selectedAnswer == option && option != currentQuestion.correctAnswer,
-                                isDisabled: showingFeedback
-                            ) {
-                                selectAnswer(option)
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.lg) {
+                            // Question Card with animation
+                            VStack(spacing: Theme.Spacing.sm) {
+                                Text("🌍")
+                                    .font(.system(size: 35))
+                                    .scaleEffect(questionScale)
+                                
+                                Text(currentQuestion.questionFormat)
+                                    .font(Theme.Typography.title3)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                                
+                                Text(currentQuestion.country.name)
+                                    .font(Theme.Typography.title2)
+                                    .foregroundStyle(Theme.Gradients.primary)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.6)
+                                    .padding(.horizontal)
                             }
-                            .transition(.scale.combined(with: .opacity))
-                            .animation(
-                                Theme.Animation.bouncy.delay(Double(index) * 0.05),
-                                value: currentQuestion.country.name
-                            )
-                        }
-                    }
-                    .padding(.horizontal)
-                    
-                    Spacer()
-                    
-                    // Next Button with gradient
-                    if showingFeedback {
-                        Button {
-                            nextQuestion()
-                        } label: {
-                            HStack {
-                                Text(session.currentQuestionIndex + 1 < session.totalQuestions ? "Next Question" : "Finish Quiz")
-                                Image(systemName: session.currentQuestionIndex + 1 < session.totalQuestions ? "arrow.right" : "flag.checkered")
-                            }
-                            .font(Theme.Typography.title2)
-                            .foregroundStyle(.white)
+                            .padding(Theme.Spacing.md)
                             .frame(maxWidth: .infinity)
-                            .padding(Theme.Spacing.lg)
-                            .background(isCorrect ? Theme.Gradients.success : Theme.Gradients.primary)
-                            .cornerRadius(Theme.CornerRadius.md)
-                            .shadow(
-                                color: (isCorrect ? Theme.Colors.successGreen : Theme.Colors.primaryBlue).opacity(0.4),
-                                radius: Theme.Shadow.colored.radius,
-                                x: Theme.Shadow.colored.x,
-                                y: Theme.Shadow.colored.y
-                            )
+                            .gradientCardStyle(gradient: Theme.Gradients.quizCard)
+                            .padding(.horizontal)
+                            .scaleEffect(questionScale)
+                            .opacity(questionOpacity)
+                            .offset(x: questionOffset)
+                            .id(currentQuestion.country.name)
+                            .transition(.asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .scale.combined(with: .opacity)
+                            ))
+                            .padding(.top, Theme.Spacing.md)
+                            
+                            // Answer Options with bounce animations
+                            VStack(spacing: Theme.Spacing.sm) {
+                                ForEach(Array(currentQuestion.options.enumerated()), id: \.element) { index, option in
+                                    AnswerButton(
+                                        text: option,
+                                        isSelected: selectedAnswer == option,
+                                        isCorrect: showingFeedback && option == currentQuestion.correctAnswer,
+                                        isWrong: showingFeedback && selectedAnswer == option && option != currentQuestion.correctAnswer,
+                                        isDisabled: showingFeedback
+                                    ) {
+                                        selectAnswer(option)
+                                    }
+                                    .transition(.scale.combined(with: .opacity))
+                                    .animation(
+                                        Theme.Animation.bouncy.delay(Double(index) * 0.05),
+                                        value: currentQuestion.country.name
+                                    )
+                                }
+                            }
+                            .padding(.horizontal)
+                            .allowsHitTesting(!showingFeedback)
+                            
+                            // Next Button with gradient
+                            if showingFeedback {
+                                Button {
+                                    nextQuestion()
+                                } label: {
+                                    HStack {
+                                        Text(session.currentQuestionIndex + 1 < session.totalQuestions ? "Next Question" : "Finish Quiz")
+                                        Image(systemName: session.currentQuestionIndex + 1 < session.totalQuestions ? "arrow.right" : "flag.checkered")
+                                    }
+                                    .font(Theme.Typography.headline)
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(Theme.Spacing.md)
+                                    .background(isCorrect ? Theme.Gradients.success : Theme.Gradients.primary)
+                                    .cornerRadius(Theme.CornerRadius.md)
+                                    .shadow(
+                                        color: (isCorrect ? Theme.Colors.successGreen : Theme.Colors.primaryBlue).opacity(0.4),
+                                        radius: Theme.Shadow.colored.radius,
+                                        x: Theme.Shadow.colored.x,
+                                        y: Theme.Shadow.colored.y
+                                    )
+                                }
+                                .padding(.horizontal)
+                                .padding(.top, Theme.Spacing.md)
+                                .padding(.bottom, Theme.Spacing.lg)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .sensoryFeedback(.success, trigger: showingFeedback)
+                            }
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 40)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .sensoryFeedback(.success, trigger: showingFeedback)
                     }
                 }
                 .navigationBarTitleDisplayMode(.inline)
@@ -186,7 +187,6 @@ struct QuizView: View {
                     Text("Your progress will not be saved.")
                 }
             }
-            .safeAreaPadding(.bottom)
         )
     }
     

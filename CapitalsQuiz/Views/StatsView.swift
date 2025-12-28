@@ -11,6 +11,7 @@ struct StatsView: View {
     @ObservedObject var statsManager: StatsManager
     @Environment(\.dismiss) var dismiss
     @State private var selectedTab = 0
+    @State private var selectedQuizType: QuizType = .countryCapitals
     
     var body: some View {
         NavigationStack {
@@ -37,6 +38,17 @@ struct StatsView: View {
                     }
                     .padding()
                     
+                    // Quiz Type Picker
+                    Picker("Quiz Type", selection: $selectedQuizType.animation(Theme.Animation.smooth)) {
+                        ForEach(QuizType.allCases) { type in
+                            Text("\(type.emoji) \(type.tabLabel)")
+                                .tag(type)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
+                    .padding(.bottom, Theme.Spacing.xs)
+                    
                     // Animated Tab Picker
                     Picker("Stats View", selection: $selectedTab.animation(Theme.Animation.smooth)) {
                         Label("Overview", systemImage: "chart.bar.fill").tag(0)
@@ -49,13 +61,13 @@ struct StatsView: View {
                     
                     // Content with smooth transitions
                     TabView(selection: $selectedTab) {
-                        OverviewTab(statsManager: statsManager)
+                        OverviewTab(statsManager: statsManager, quizType: selectedQuizType)
                             .tag(0)
                         
-                        CountriesTab(statsManager: statsManager)
+                        CountriesTab(statsManager: statsManager, quizType: selectedQuizType)
                             .tag(1)
                         
-                        HistoryTab(statsManager: statsManager)
+                        HistoryTab(statsManager: statsManager, quizType: selectedQuizType)
                             .tag(2)
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
@@ -68,17 +80,26 @@ struct StatsView: View {
 
 struct OverviewTab: View {
     @ObservedObject var statsManager: StatsManager
+    let quizType: QuizType
     @State private var selectedContinent: Continent? = nil
     
+    private var typeStats: QuizTypeStats? {
+        statsManager.stats[quizType]
+    }
+    
     private var filteredStats: (questions: Int, correct: Int, accuracy: Double) {
+        guard let typeStats = typeStats else {
+            return (0, 0, 0.0)
+        }
+        
         if let continent = selectedContinent {
             let key = continent.rawValue
-            if let cStats = statsManager.continentStats[key] {
+            if let cStats = typeStats.categoryStats[key] {
                 return (cStats.questionsAnswered, cStats.correctAnswers, cStats.accuracy)
             }
             return (0, 0, 0.0)
         } else {
-            return (statsManager.totalQuestionsAnswered, statsManager.totalCorrectAnswers, statsManager.overallAccuracy)
+            return (typeStats.totalQuestions, typeStats.totalCorrect, typeStats.accuracy)
         }
     }
     
@@ -143,14 +164,14 @@ struct OverviewTab: View {
                                 icon: "flame.fill",
                                 gradient: Theme.Gradients.warning,
                                 title: "Current Streak",
-                                value: "\(statsManager.currentStreak)"
+                                value: "\(typeStats?.currentStreak ?? 0)"
                             )
                             
                             ModernStatsCard(
                                 icon: "trophy.fill",
                                 gradient: LinearGradient(colors: [Theme.Colors.accentYellow, Theme.Colors.warningOrange], startPoint: .leading, endPoint: .trailing),
                                 title: "Best Streak",
-                                value: "\(statsManager.longestStreak)"
+                                value: "\(typeStats?.longestStreak ?? 0)"
                             )
                         }
                     }
@@ -166,12 +187,12 @@ struct OverviewTab: View {
                     
                     let allCountriesFiltered = selectedContinent == nil ? CountriesData.allCountries : CountriesData.allCountries.filter { $0.continent == selectedContinent }
                     let totalCountries = allCountriesFiltered.count
-                    let askedCountries = statsManager.countryStats.values.filter { stat in
-                        allCountriesFiltered.contains { $0.name == stat.countryName }
-                    }.count
-                    let masteredCountries = statsManager.countryStats.values.filter { stat in
-                        stat.accuracy >= 0.8 && stat.timesAsked >= 3 && allCountriesFiltered.contains { $0.name == stat.countryName }
-                    }.count
+                    let askedCountries = (typeStats?.itemStats.values.filter { stat in
+                        allCountriesFiltered.contains { $0.name == stat.itemName }
+                    }.count) ?? 0
+                    let masteredCountries = (typeStats?.itemStats.values.filter { stat in
+                        stat.accuracy >= 0.8 && stat.timesAsked >= 3 && allCountriesFiltered.contains { $0.name == stat.itemName }
+                    }.count) ?? 0
                     
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                         ProgressCard(icon: "globe.americas.fill", gradient: Theme.Gradients.primary, title: "Total", value: "\(totalCountries)")
@@ -200,6 +221,7 @@ struct OverviewTab: View {
 
 struct CountriesTab: View {
     @ObservedObject var statsManager: StatsManager
+    let quizType: QuizType
     @State private var searchText = ""
     @State private var sortOrder = SortOrder.accuracy
     @State private var selectedContinent: Continent? = nil
@@ -208,12 +230,16 @@ struct CountriesTab: View {
         case accuracy, name, timesAsked
     }
     
-    var sortedCountries: [(country: Country, stats: CountryStats?)] {
+    private var typeStats: QuizTypeStats? {
+        statsManager.stats[quizType]
+    }
+    
+    var sortedCountries: [(country: Country, stats: ItemStats?)] {
         // Filter by continent first
         let continentFiltered = selectedContinent == nil ? CountriesData.allCountries : CountriesData.allCountries.filter { $0.continent == selectedContinent }
         
         let allCountriesWithStats = continentFiltered.map { country in
-            (country: country, stats: statsManager.countryStats[country.name])
+            (country: country, stats: typeStats?.itemStats[country.id])
         }
         
         let filtered = searchText.isEmpty ? allCountriesWithStats : allCountriesWithStats.filter {
@@ -329,7 +355,7 @@ struct CountryStatsRow: View {
 
 struct ModernCountryStatsRow: View {
     let country: Country
-    let stats: CountryStats?
+    let stats: ItemStats?
     
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -391,11 +417,20 @@ struct ModernCountryStatsRow: View {
 
 struct HistoryTab: View {
     @ObservedObject var statsManager: StatsManager
+    let quizType: QuizType
     @State private var emptyStateScale: CGFloat = 0.8
+    
+    private var typeStats: QuizTypeStats? {
+        statsManager.stats[quizType]
+    }
+    
+    private var quizHistory: [QuizHistoryEntry] {
+        typeStats?.quizHistory ?? []
+    }
     
     var body: some View {
         Group {
-            if statsManager.quizHistory.isEmpty {
+            if quizHistory.isEmpty {
                 VStack(spacing: Theme.Spacing.lg) {
                     Spacer()
                     
@@ -427,7 +462,7 @@ struct HistoryTab: View {
                 .padding()
             } else {
                 List {
-                    ForEach(statsManager.quizHistory.reversed()) { entry in
+                    ForEach(quizHistory.reversed()) { entry in
                         ModernHistoryRow(entry: entry)
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)

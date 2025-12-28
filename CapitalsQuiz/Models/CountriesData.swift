@@ -97,7 +97,6 @@ struct CountriesData {
         Country(name: "North Korea", capital: "Pyongyang", continent: .asia),
         Country(name: "Oman", capital: "Muscat", continent: .asia),
         Country(name: "Pakistan", capital: "Islamabad", continent: .asia),
-        Country(name: "Palestine", capital: "Ramallah", continent: .asia),
         Country(name: "Philippines", capital: "Manila", continent: .asia),
         Country(name: "Qatar", capital: "Doha", continent: .asia),
         Country(name: "Saudi Arabia", capital: "Riyadh", continent: .asia),

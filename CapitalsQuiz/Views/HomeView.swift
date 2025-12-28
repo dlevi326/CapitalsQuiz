@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var quizManager: QuizManager
     @ObservedObject var statsManager: StatsManager
+    let quizType: QuizType
     @State private var showingStats = false
     @State private var showingResetAlert = false
     @State private var selectedContinent: Continent? = nil
@@ -32,16 +33,11 @@ struct HomeView: View {
                 Theme.Gradients.backgroundTop
                     .ignoresSafeArea()
                 
-                // Floating particles background
-                FloatingParticlesView()
-                    .ignoresSafeArea()
-                    .opacity(0.3)
-                
                 ScrollView {
                     VStack(spacing: Theme.Spacing.lg) {
                         // Header with animated globe
                         VStack(spacing: Theme.Spacing.md) {
-                            Text("🌍")
+                            Text(quizType.emoji)
                                 .font(.system(size: 100))
                                 .scaleEffect(globeScale)
                                 .shadow(
@@ -52,18 +48,17 @@ struct HomeView: View {
                                 )
                                 .onAppear {
                                     withAnimation(
-                                        .spring(response: 0.6, dampingFraction: 0.5)
-                                        .repeatForever(autoreverses: true)
+                                        .spring(response: 0.6, dampingFraction: 0.7)
                                     ) {
-                                        globeScale = 1.1
+                                        globeScale = 1.05
                                     }
                                 }
                             
-                            Text("Capitals Quiz")
+                            Text(quizType.title)
                                 .font(Theme.Typography.heroTitle)
                                 .foregroundStyle(Theme.Gradients.primary)
                             
-                            Text("Test your geography knowledge!")
+                            Text(quizType.subtitle)
                                 .font(Theme.Typography.callout)
                                 .foregroundStyle(Theme.Colors.textSecondary)
                         }
@@ -325,7 +320,7 @@ struct StatRow: View {
 
 #Preview {
     let statsManager = StatsManager()
-    let quizManager = QuizManager(statsManager: statsManager)
-    return HomeView(quizManager: quizManager, statsManager: statsManager)
+    let quizManager = QuizManager(statsManager: statsManager, quizType: .countryCapitals)
+    HomeView(quizManager: quizManager, statsManager: statsManager, quizType: .countryCapitals)
 }
 
